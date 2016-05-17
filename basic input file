@@ -1,0 +1,69 @@
+log log.min
+units real
+boundary p p p 
+
+atom_style full
+pair_style hybrid lj/cut/coul/cut 12.0 buck/coul/cut 12.0  # 
+bond_style hybrid morse harmonic
+angle_style harmonic
+dihedral_style harmonic
+improper_style cvff
+
+read_data A.data
+
+neighbor        2.0 bin                 
+# neighbor skin style
+# skin-- All atom pairs within a neighbor cutoff distance equal to the their force 
+# cutoff plus the skin distance are stored in the list
+# style--The style value selects what algorithm is used to build the list
+
+neigh_modify    delay 5
+# This command sets parameters that affect the building and use of pairwise neighbor lists. 
+# Depending on what pair interactions and other commands are defined, a simulation may require one or more neighbor lists.
+# The delay setting means never build new lists until at least N steps after the previous build. 
+
+minimize 1.0e-4 1.0e-6 100000 100000
+# minimize etol ftol maxiter maxeval
+# etol = stopping tolerance for energy (unitless)
+# ftol = stopping tolerance for force (force units)
+# maxiter = max iterations of minimizer
+# maxeval = max number of force/energy evaluations
+
+
+
+write_data data.min
+write_restart min-step.bak
+
+velocity all create 100.0 125 dist uniform
+thermo 50000
+timestep        1
+
+#fix 1 all nvt temp 300.0 300.0 100.0
+#dump test1 all atom 100 dump-all.test1
+#dump_modify test1 sort id
+#run             5000
+#write_data data-nvt.md
+#write_restart nvt-step.bak
+
+fix 2 all npt temp 100.0 300.0 100.0 iso 0.0 0.0 100.0
+
+compute UOw all rdf 120 6 4
+compute UOc all rdf 120 6 3
+compute CaOw all rdf 120 1 4
+compute CaOc all rdf 120 1 3
+compute OcHw all rdf 120 3 5
+compute OcOw all rdf 120 3 4
+fix outrdf1 all ave/time 10000 1 10000 c_UOw c_UOc c_CaOw file rdf1.rdf mode vector
+fix outrdf2 all ave/time 10000 1 10000 c_CaOc c_OcHw c_OcOw file rdf2.rdf mode vector
+
+dump test2 all atom 5000 dump-all.test2
+dump_modify test2 sort id
+dump test3 all xyz 5000 movie.xyz
+dump_modify test3 element U O C O Ca O H
+
+#run             1010000
+run             50000000
+
+write_data data-npt.md
+write_restart npt-step.bak
+
